@@ -1,14 +1,9 @@
 package project.ece496.speechsentiments;
 
-import android.Manifest;
 import android.content.Context;
-import android.content.pm.PackageManager;
 import android.media.MediaPlayer;
-import android.media.MediaRecorder;
+import android.os.AsyncTask;
 import android.os.Bundle;
-import android.support.annotation.NonNull;
-import android.support.v4.app.ActivityCompat;
-import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.AppCompatButton;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
@@ -17,35 +12,36 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.LinearLayout;
+import android.widget.TextView;
 
+import java.io.File;
 import java.io.IOException;
 
-public class MainActivity extends AppCompatActivity {
+import project.ece496.speechsentiments.activities.RecorderActivity;
+import project.ece496.speechsentiments.analysis.TextToneAnalyzer;
+import project.ece496.speechsentiments.analysis.WatsonToneAnalyzer;
+import project.ece496.speechsentiments.recorder.AudioRecorder;
+import project.ece496.speechsentiments.transcriber.WatsonSpeechTranscriber;
+
+public class MainActivity extends RecorderActivity {
     private static final String LOG_TAG = "AudioRecordTest";
-    private static final int REQUEST_RECORD_AUDIO_PERMISSION = 200;
     private static String mFileName = null;
 
     private RecordButton mRecordButton = null;
-    private MediaRecorder mRecorder = null;
+    private AudioRecorder mRecorder = null;
 
     private PlayButton   mPlayButton = null;
     private MediaPlayer mPlayer = null;
 
-    // Requesting permission to RECORD_AUDIO
-    private boolean permissionToRecordAccepted = false;
-    private String [] permissions = {Manifest.permission.RECORD_AUDIO};
 
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        switch (requestCode){
-            case REQUEST_RECORD_AUDIO_PERMISSION:
-                permissionToRecordAccepted  = grantResults[0] == PackageManager.PERMISSION_GRANTED;
-                break;
-        }
-        if (!permissionToRecordAccepted ) finish();
 
-    }
+    private TextView speechTranscriptionTextView;
+    private TextView toneAnalysisTextView;
+
+    private TextToneAnalyzer textToneAnalyzer;
+    private WatsonSpeechTranscriber transcriber;
+
+    private String transcription;
 
     private void onRecord(boolean start) {
         if (start) {
@@ -80,25 +76,15 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void startRecording() {
-        mRecorder = new MediaRecorder();
-        mRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
-        mRecorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
-        mRecorder.setOutputFile(mFileName);
-        mRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB);
-
-        try {
-            mRecorder.prepare();
-        } catch (IOException e) {
-            Log.e(LOG_TAG, "prepare() failed");
-        }
-
-        mRecorder.start();
+        mRecorder = new AudioRecorder(mFileName, this);
+        mRecorder.startRecording();
     }
 
     private void stopRecording() {
-        mRecorder.stop();
-        mRecorder.release();
+        mRecorder.stopRecording();
         mRecorder = null;
+
+        new TranscriptionTask().execute(new File(mFileName));
     }
 
     class RecordButton extends AppCompatButton {
@@ -152,15 +138,15 @@ public class MainActivity extends AppCompatActivity {
 
         // Record to the external cache directory for visibility
         mFileName = getExternalCacheDir().getAbsolutePath();
-        mFileName += "/audiorecordtest.3gp";
+        mFileName += "/test.wav";
 
         setContentView(R.layout.activity_main);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
-        ActivityCompat.requestPermissions(this, permissions, REQUEST_RECORD_AUDIO_PERMISSION);
-
         LinearLayout ll = new LinearLayout(this);
+        ll.setOrientation(LinearLayout.VERTICAL);
+
         mRecordButton = new RecordButton(this);
         ll.addView(mRecordButton,
                 new LinearLayout.LayoutParams(
@@ -173,6 +159,16 @@ public class MainActivity extends AppCompatActivity {
                         ViewGroup.LayoutParams.WRAP_CONTENT,
                         ViewGroup.LayoutParams.WRAP_CONTENT,
                         0));
+
+        speechTranscriptionTextView = new TextView(this);
+        speechTranscriptionTextView.setText("");
+        ll.addView(speechTranscriptionTextView);
+
+        // tone analysis stuff
+        toneAnalysisTextView = new TextView(this);
+        toneAnalysisTextView.setText("");
+        ll.addView(toneAnalysisTextView);
+
         setContentView(ll);
     }
 
@@ -202,13 +198,41 @@ public class MainActivity extends AppCompatActivity {
     public void onStop() {
         super.onStop();
         if (mRecorder != null) {
-            mRecorder.release();
             mRecorder = null;
         }
 
         if (mPlayer != null) {
             mPlayer.release();
             mPlayer = null;
+        }
+    }
+
+
+    class TranscriptionTask extends AsyncTask<File, Void, String>{
+        @Override
+        protected String doInBackground(File... files) {
+            transcriber = new WatsonSpeechTranscriber();
+            return transcriber.transcribe(files[0]);
+        }
+
+        @Override
+        protected void onPostExecute(String s) {
+            // TODO: spaghetti code here...
+            new ToneAnalysisTask().execute(s);
+            speechTranscriptionTextView.setText(s);
+        }
+    }
+
+    class ToneAnalysisTask extends AsyncTask<String, Void, String>{
+        @Override
+        protected String doInBackground(String... strings) {
+            textToneAnalyzer = new WatsonToneAnalyzer();
+            return textToneAnalyzer.analyze(strings[0]).toString();
+        }
+
+        @Override
+        protected void onPostExecute(String s) {
+            toneAnalysisTextView.setText(s);
         }
     }
 }

@@ -9,6 +9,13 @@ android {
         versionCode 1
         versionName "1.0"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+
+        buildConfigField 'String', 'ToneAnalyzerUsername', SpeechSentimentsApp_ToneAnalyzer_username
+        buildConfigField 'String', 'ToneAnalyzerPassword', SpeechSentimentsApp_ToneAnalyzer_password
+        buildConfigField 'String', 'ToneAnalyzerVersion', SpeechSentimentsApp_ToneAnalyzer_version
+
+        buildConfigField 'String', 'Speech2TextUsername', SpeechSentimentsApp_Speech2Text_username
+        buildConfigField 'String', 'Speech2TextPassword', SpeechSentimentsApp_Speech2Text_password
     }
     buildTypes {
         release {
@@ -25,6 +32,9 @@ dependencies {
     implementation 'com.android.support:design:26.1.0'
     implementation 'com.android.support:support-annotations:27.1.1'
 
+    implementation 'com.kailashdabhi:om-recorder:1.1.0'
+
+    implementation 'com.ibm.watson.developer_cloud:java-sdk:6.3.1'
     testImplementation 'junit:junit:4.12'
     androidTestImplementation 'com.android.support.test:runner:1.0.2'
     androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.2'
