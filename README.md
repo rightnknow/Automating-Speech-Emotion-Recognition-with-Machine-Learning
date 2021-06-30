@@ -1,3 +1,6 @@
+#To read my comments on the progress of model development please refer to the issue section of https://github.com/capstone496/SpeechSentiments
+
+
 # SpeechSentiments
 
 Humans express their thoughts and emotions naturally through speech. Enabling natural interactions between humans and machines over a wide spectrum of activities from clinical monitoring to responsive entertainment systems requires automated systems capable of recognizing context and emotion in naturally occurring human speech. Thus, the next-generation human computer interfaces in these application areas will be empowered by speech-based emotional intelligence.
